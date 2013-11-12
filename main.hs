@@ -7,43 +7,12 @@ module Main where
 
 import System.Environment (getArgs)
 import Network (listenOn, PortID(..), accept)
-import System.IO (hSetBuffering, BufferMode(..), hClose, hPutStr, Handle(..))
+import System.IO (hSetBuffering, BufferMode(..), hClose, Handle(..))
 import Control.Monad (forever)
 
-data RequestMethod = GET 
-                   | POST 
-                   | PUT
-                   | DELETE
-                   deriving (Show)
+import Server
 
-data RequestHeaders = RequestHeaders {
-                    reqConType :: String,    -- Request Content-type, the mime type of the request
-                    rAccept :: String   -- */*
-}
-
-data RequestBody = RequestBody {
-                    rURI :: String,             -- Request Universal Resourse Identifier
-                    rMethod :: RequestMethod,   -- Request Type
-                    rParams :: [(String,String)]--  Parâmetros (chave,valor)
-}    
-
-data Request = Request RequestHeaders RequestBody
-
-data ResponseHeaders = ResponseHeaders {
-                    statusCode :: String,
-                    resDate :: String,
-                    resConType :: String         -- Response Content-type, the mime type of this content 
-}
-type ResponseBody = String
-
-data Response = Response ResponseHeaders ResponseBody -- deriving(Show)
-
-instance Show ResponseHeaders where
-    show resp = "Status Code: " ++ statusCode(resp) ++ "\nDate: " ++ resDate(resp) ++ "\nContent-Type:" ++ resConType(resp) ++ "\n"
-
-instance Show Response where
-    show (Response headers body) = show(headers) ++ body ++ "\n"
-
+-- loads the HERB server 
 main :: IO ()
 main = do
     args <- getArgs
@@ -52,15 +21,5 @@ main = do
     putStrLn $ "HERB Server Started. Listening on port " ++ show porta
     forever $ do
         (handle, hostName, portNumber) <- accept socket
-        despachar handle hostName
+        dispatch handle hostName
         hClose handle
-
-despachar :: Handle -> String -> IO ()
-despachar handle hostname = do  
-    putStrLn $ "Request from " ++ hostname
-    responder handle
-
-responder :: Handle -> IO ()
-responder handle = do
-    let resposta = Response ResponseHeaders {statusCode = "200", resDate = "Data/Hora", resConType = "application/json" } "{ JSON BODY }"
-    hPutStr handle $ show resposta
