@@ -6,7 +6,7 @@
 module Main where
 
 import System.Environment (getArgs)
-import Network (listenOn, PortID(..), accept)
+import Network (listenOn, PortID(..), PortNumber(..), accept)
 import System.IO (hSetBuffering, BufferMode(..), Handle(..))
 import Control.Monad (forever)
 import Control.Concurrent (forkIO)
@@ -16,14 +16,14 @@ import Server
 -- loads the HERB server 
 main :: IO ()
 main = do
-    args <- getArgs
-    --; if (length args > 0) then 
-    let port = fromIntegral (read $ head args :: Int)
-        --else 
-        --    let port = 8080            
-    socket <- listenOn $ PortNumber port
+    port <- fmap lerPorta getArgs
+    socket <- listenOn $ PortNumber port 
     putStrLn $ "HERB Server Started. Listening on port " ++ show port
     forever $ do
         (handle, hostName, portNumber) <- accept socket
-        -- hSetBuffering handle NoBuffering
+        hSetBuffering handle NoBuffering
         forkIO $ dispatch handle hostName
+
+lerPorta :: [String] -> PortNumber
+lerPorta []  = 8080 
+lerPorta [p] = fromIntegral $ read p        
