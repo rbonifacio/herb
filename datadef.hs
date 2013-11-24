@@ -8,43 +8,52 @@ data RequestMethod = GET
                    | UNDEFINED
                    deriving (Show, Eq)
 
-data RequestHeaders = RequestHeaders {
-                    reqConType :: String,    -- Request Content-type, the mime type of the request
-                    rAccept :: String   -- */*
-}
+data Request = Request Rqst RequestHeaders RequestBody
 
-data RequestBody = RequestBody {
-                    rURI :: String,             -- Request Universal Resourse Identifier
+data Rqst = Rqst {
                     rMethod :: RequestMethod,   -- Request Type
-                    rParams :: [(String,String)]--  Parâmetros (chave,valor)
+                    rURI :: String,             -- Request Universal Resourse Identifier
+                    rVersion :: String          -- Protocol Version
 }
 
-data Request = Request RequestHeaders RequestBody
+data RequestHeaders = RequestHeaders {
+                        reqConType :: String,    -- Request Content-type, the mime type of the request
+                        rAccept :: String   -- */*
+                      }
+
+data Response = Response ResponseHeaders ResponseBody
+
+data RequestBody = RequestBody {                    
+                        rParams :: [(String,String)]--  Parâmetros (chave,valor)
+                    }
 
 data ResponseHeaders = ResponseHeaders {
                     statusCode :: String,
                     resDate :: String,
-                    resConType :: String         -- Response Content-type, the mime type of this content
+                    resConType :: String,         -- Response Content-type, the mime type of this content
+                    resServer :: String
 }
 
 type ResponseBody = String
 
-data Response = Response ResponseHeaders ResponseBody
+instance Show Request where
+    show (Request rqst hdr bdy) = "\nURI: " ++ rURI(rqst) ++ "\nRequest Method: " ++ show(rMethod(rqst)) ++ "\nVersion: " ++ rVersion(rqst) ++ show(hdr) ++ show(bdy)
 
-instance Show ResponseHeaders where
-    show resp = "HTTP/1.1 " ++ statusCode(resp) ++ reasonPhrase(statusCode(resp)) ++ "\nDate: " ++ resDate(resp) ++ "\nContent-Type: " ++ resConType(resp)
+instance Show RequestHeaders where
+    show hdr = "\nContent-type: " ++ reqConType(hdr) ++ "\nAccept: " ++ rAccept(hdr)
+
+instance Show RequestBody where
+    show bdy = "\nParams: " ++ show(rParams(bdy)) 
 
 instance Show Response where
     show (Response headers body) = show(headers) ++ "\n\n" ++ body
 
-instance Show Request where
-    show (Request headers body) = show(headers) ++ "\n" ++ show(body)
-
-instance Show RequestHeaders where
-    show rHeaders = "Content-type: " ++ reqConType(rHeaders) ++ "\nAccept: " ++ rAccept(rHeaders)
-
-instance Show RequestBody where
-    show rBody = "URI: " ++ rURI(rBody) ++ "\nRequest Method: " ++ show(rMethod(rBody)) ++ "\nParams: " ++ show(rParams(rBody)) 
+instance Show ResponseHeaders where
+    show resp = "HTTP/1.1 " ++ statusCode(resp) ++ reasonPhrase(statusCode(resp)) 
+             ++ "\nDate: " ++ resDate(resp)
+             ++ "\nContent-Type: " ++ resConType(resp)
+             ++ "\nServer: " ++ resServer(resp)
+             ++ "\nConnection: close"
 
 stringToMethod :: String -> RequestMethod
 stringToMethod s = case s of
@@ -96,4 +105,3 @@ reasonPhrase statusCode = case statusCode of
     "503" -> " Service Unavailable"
     "504" -> " Gateway Time-out"
     "505" -> " HTTP Version not supported"
-
