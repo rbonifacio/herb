@@ -20,7 +20,7 @@ main = do
     socket <- listenOn $ PortNumber port 
     putStrLn $ "HERB Server Started. Listening on port " ++ show port
     forever $ do
-        (handle, hostName, portNumber) <- accept socket
+        (handle, hostName, clientPortNumber) <- accept socket
         hSetBuffering handle NoBuffering
         forkIO $ dispatch handle hostName
 

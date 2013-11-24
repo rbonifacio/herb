@@ -2,6 +2,7 @@ module Server where
 -- HERB server's functions 
 
 import System.IO (Handle(..), hPutStr, hClose, hGetContents)
+import System.IO.Unsafe (unsafePerformIO)
 import Data.Time
 
 import DataDef
@@ -9,38 +10,62 @@ import DataDef
 dispatch :: Handle -> String -> IO ()
 dispatch handle hostname = do  
     putStrLn $ "*** Request from " ++ hostname ++ "***"
+    -- Read Request from Client
     rqst <- fmap lines (hGetContents handle) --[String]
     let headRqst = head rqst
     putStrLn $ headRqst ++ "\n"
+    -- Parse Request
     let parsedRqst = parseRequest $ headRqst
     putStrLn $ "*** REQUEST ***\n" ++ (show parsedRqst) ++ "\n"
+    -- Generate Response
     let response = buildResponse parsedRqst
     putStrLn $ "*** RESPONSE ***\n" ++ (show response) ++ "\n"
+    -- Send Response Back to client
     reply handle response
     return ()
 
 parseRequest :: String -> Request
-parseRequest lista = case (head (words (lista))) of
-    "GET" -> Request RequestHeaders { reqConType = "application/json", rAccept = "*/*"} RequestBody { rURI = (words lista) !! 1, rMethod = GET, rParams = []}
-    "POST" -> Request RequestHeaders { reqConType = "application/json", rAccept = "*/*"} RequestBody { rURI = (words lista) !! 1, rMethod = POST, rParams = []}
-    "PUT" -> Request RequestHeaders { reqConType = "application/json", rAccept = "*/*"} RequestBody { rURI = (words lista) !! 1, rMethod = PUT, rParams = []}
-    "DELETE" -> Request RequestHeaders { reqConType = "application/json", rAccept = "*/*"} RequestBody { rURI = (words lista) !! 1, rMethod = DELETE, rParams = []}
-    _  ->  Request RequestHeaders { reqConType = "", rAccept = ""}  RequestBody { rURI = (words lista) !! 1, rMethod = UNDEFINED, rParams = [] }
+parseRequest lista = 
+    let uri =  (words lista) !! 1
+        version = "HTTP/1.1"
+        contype = "application/json"
+        acpt = "*/*"
+        rqst :: RequestMethod -> Request
+        rqst m = Request 
+                 Rqst { rURI = uri, rMethod = m, rVersion = version } 
+                 RequestHeaders { reqConType = contype, rAccept = acpt } 
+                 RequestBody { rParams = [] }
+    in case (head (words (lista))) of
+        "GET" -> rqst GET
+        "POST" -> rqst POST
+        "PUT" -> rqst PUT
+        "DELETE" -> rqst DELETE
+        _ -> rqst UNDEFINED
 
 buildResponse :: Request -> Response
-buildResponse (Request hd bd)
-    | rMethod(bd) == GET = Response ResponseHeaders { statusCode = "200", resDate = "", resConType = "application/json" } "{ response for GET }"
-    | rMethod(bd) == POST = Response ResponseHeaders { statusCode = "200", resDate = "", resConType = "application/json" } "{ response for POST }"
-    | rMethod(bd) == PUT = Response ResponseHeaders { statusCode = "200", resDate = "", resConType = "application/json" } "{ response for PUT }"
-    | rMethod(bd) == DELETE = Response ResponseHeaders { statusCode = "200", resDate = "", resConType = "application/json" } "{ response for DELETE }"
-    | rMethod(bd) == UNDEFINED = Response ResponseHeaders { statusCode = "405", resDate = "", resConType = "application/json" } "{ UNDEFINED METHOD }"
+buildResponse (Request rqst hdr bdy) = 
+    let date = unsafePerformIO $ fmap show getCurrentTime
+        server = "HERB Server 0.1"
+        contype = "application/json"
+    in case (rMethod(rqst)) of 
+        GET -> Response
+               ResponseHeaders { statusCode = "200", resDate = date, resConType = contype, resServer = server}
+               "{ response for GET }"
+        POST -> Response
+               ResponseHeaders { statusCode = "200", resDate = date, resConType = contype, resServer = server}
+               "{ response for POST }"
+        PUT -> Response
+               ResponseHeaders { statusCode = "200", resDate = date, resConType = contype, resServer = server}
+               "{ response for PUT }"
+        DELETE -> Response
+               ResponseHeaders { statusCode = "200", resDate = date, resConType = contype, resServer = server}
+               "{ response for DELETE }"
+        UNDEFINED -> Response
+               ResponseHeaders { statusCode = "405", resDate = date, resConType = contype, resServer = server}
+               "{ response for GET }"
 
 reply :: Handle -> Response -> IO ()
-reply handle response@(Response hdr bdy) = do
-    cT <- fmap show getCurrentTime  
-    let respHeader = hdr { resDate = cT }
-    let rsp = Response respHeader bdy
+reply handle rsp = do
     hPutStr handle $ show rsp
     hClose handle
     return ()
-    
