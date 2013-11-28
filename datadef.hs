@@ -16,16 +16,11 @@ data Rqst = Rqst {
                     rVersion :: String          -- Protocol Version
 }
 
-data RequestHeaders = RequestHeaders {
-                        reqConType :: String,    -- Request Content-type, the mime type of the request
-                        rAccept :: String   -- */*
-                      }
+type RequestHeaders = [(String,String)]
+
+type RequestBody = String -- TODO: usar maybe String
 
 data Response = Response ResponseHeaders ResponseBody
-
-data RequestBody = RequestBody {                    
-                        rParams :: [(String,String)]--  Parâmetros (chave,valor)
-                    }
 
 data ResponseHeaders = ResponseHeaders {
                     statusCode :: String,
@@ -37,13 +32,9 @@ data ResponseHeaders = ResponseHeaders {
 type ResponseBody = String
 
 instance Show Request where
-    show (Request rqst hdr bdy) = "\nURI: " ++ rURI(rqst) ++ "\nRequest Method: " ++ show(rMethod(rqst)) ++ "\nVersion: " ++ rVersion(rqst) ++ show(hdr) ++ show(bdy)
-
-instance Show RequestHeaders where
-    show hdr = "\nContent-type: " ++ reqConType(hdr) ++ "\nAccept: " ++ rAccept(hdr)
-
-instance Show RequestBody where
-    show bdy = "\nParams: " ++ show(rParams(bdy)) 
+    show (Request rqst hdr bdy) =   show(rMethod(rqst)) ++ " " ++ rURI(rqst) ++ " " ++ rVersion(rqst) ++ 
+                                    "\n" ++ (rqstHdrsToString hdr []) ++
+                                    "\n" ++ bdy
 
 instance Show Response where
     show (Response headers body) = show(headers) ++ "\n\n" ++ body
@@ -54,6 +45,10 @@ instance Show ResponseHeaders where
              ++ "\nContent-Type: " ++ resConType(resp)
              ++ "\nServer: " ++ resServer(resp)
              ++ "\nConnection: close"
+
+rqstHdrsToString :: RequestHeaders -> String -> String
+rqstHdrsToString [] acc = acc
+rqstHdrsToString ((k,v):kvs) acc = rqstHdrsToString kvs (acc ++ k ++ ": " ++ v ++ "\n")
 
 stringToMethod :: String -> RequestMethod
 stringToMethod s = case s of
@@ -105,3 +100,4 @@ reasonPhrase statusCode = case statusCode of
     "503" -> " Service Unavailable"
     "504" -> " Gateway Time-out"
     "505" -> " HTTP Version not supported"
+    _ -> " Unknow Status Code"
