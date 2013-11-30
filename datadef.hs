@@ -1,6 +1,9 @@
 module DataDef where
 -- Defines the structures of Requests and Responses
 
+import Data.Aeson (toJSON, ToJSON(..), (.=), object, encode)
+import qualified Data.Text as T (Text(..), pack)
+
 data RequestMethod = GET 
                    | POST 
                    | PUT
@@ -101,3 +104,17 @@ reasonPhrase statusCode = case statusCode of
     "504" -> " Gateway Time-out"
     "505" -> " HTTP Version not supported"
     _ -> " Unknow Status Code"
+
+data Resource = Event { eName :: !T.Text }
+              | Set { sName :: !T.Text }
+              deriving Show
+
+instance ToJSON Resource where
+    toJSON res = case res of
+        Event e -> object [ T.pack "resName" .= e
+                          , T.pack "resType" .= T.pack "Event"
+                          ]
+        Set s -> object [ T.pack "resName" .= s
+                        , T.pack "resType" .= T.pack "Set" 
+                        ]
+
